@@ -1,0 +1,10 @@
+core-src-y+=guest.c
+core-src-y+=guest_hw.c
+core-src-y+=interrupt.c
+core-src-y+=interrupt_hw.c
+core-src-y+=memory.c
+core-src-y+=memory_hw.c
+core-src-y+=timer.c
+core-src-y+=timer_hw.c
+core-src-y+=vdev.c
+core-src-y+=vm_main.c

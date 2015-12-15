@@ -1,0 +1,95 @@
+export arch_arm_v7_dir=$(CURDIR)/arch/arm/v7
+export core_dir=$(CURDIR)/core
+export core_libhw_dir=$(CURDIR)/core/libhw
+export core_vdev_dir=$(CURDIR)/core/vdev
+export drivers_dir=$(CURDIR)/drivers
+
+arch-arm-v7-object-mks=$(shell if [ -d $(arch_arm_v7_dir) ]; then find $(arch_arm_v7_dir) -iname "objects.mk" | sort -r; fi)
+core-object-mks=$(shell if [ -d $(core_dir) ]; then find $(core_dir) -iname "objects.mk" | sort -r; fi)
+core-libhw-object-mks=$(shell if [ -d $(core_libhw_dir) ]; then find $(core_libhw_dir) -iname "objects.mk" | sort -r; fi)
+core-vdev-object-mks=$(shell if [ -d $(core_vdev_dir) ]; then find $(core_vdev_dir) -iname "objects.mk" | sort -r; fi)
+drivers-object-mks=$(shell if [ -d $(drivers_dir) ]; then find $(drivers_dir) -iname "objects.mk" | sort -r; fi)
+
+include $(arch-arm-v7-object-mks)
+include $(core-object-mks)
+include $(core-libhw-object-mks)
+include $(core-vdev-object-mks)
+include $(drivers-object-mks)
+include config.mk
+
+arch-arm-v7-y=$(foreach obj, $(arch-arm-v7-src-y), $(src))
+core-y=$(foreach obj, $(core-src-y), $(src))
+core-libhw-y=$(foreach obj, $(core-libhw-src-y), $(src))
+core-vdev-y=$(foreach obj, $(core-vdev-src-y), $(src))
+drivers-y=$(foreach obj, $(drivers-src-y), $(src))
+
+
+ASM_FILES	= #$(wildcard $(ARCH)/$(VERSION)/*.S)		
+			  $(wildcard $(LIB)/c/src/arch-arm/*.S)
+
+C_FILES 	= $(wildcard $(CORE)/*.c) 				\
+			  $(wildcard $(CORE)/libhw/*.c) 		\
+			  $(wildcard $(CORE)/vdev/*.c) 			\
+			  $(wildcard tests/*.c) 				\
+			  $(wildcard tests/libs/*.c) 				\
+			  $(wildcard $(ARCH)/*.c) 				\
+			  $(wildcard $(DRV)/*.c) 				\
+			  $(wildcard $(LIB)/c/src/*.c)				\
+			  $(wildcard $(LIB)/c/src/arch-arm/*.c)		\
+			  $(wildcard $(LIB)/c/src/sys-baremetal/arch-arm/*.c)			\
+			  $(wildcard $(LIB)/c/src/sys-baremetal/*.c)
+
+OBJS 		:= $(ASM_FILES:.S=.o) $(C_FILES:.c=.o) 
+
+BIN			= $(BUILD_DIR)/$(TARGET).bin
+LD_SCRIPT	= $(PROJECT).lds.S
+OUTPUT 		= $(TARGET).axf
+MAP			= $(PROJECT).map
+
+CC			= $(CROSS_COMPILE)gcc
+LD			= $(CROSS_COMPILE)ld
+NM			= $(CROSS_COMPILE)nm
+OBJCOPY		= $(CROSS_COMPILE)objcopy
+
+
+INCLUDES	= -I $(INC) -I $(INC)/$(LIB)/c -I $(INC)/$(LIB)/bsd -I $(INC)/$(LIB)
+INCLUDES	+= -I $(INC)/$(DRV)
+INCLUDES    += -I $(CORE)/libhw -I tests -I $(CORE) -I $(CORE)/include -I include/lib -I ./lib -I ./include/core
+INCLUDES	+= -I tests/libs
+
+CPPFLAGS	= $(CONFIG_FLAG) $(INCLUDES) -ffreestanding -nostdlib -nodefaultlibs -nostartfiles $(DEBUG_FLAG)
+CPPFLAGS	+= -Wall -Werror
+
+all: $(OBJS) $(OUTPUT) $(MAP)
+
+$(MAP): $(OUTPUT)
+	$(NM) $< > $@
+
+clean:
+	rm -f $(MAP) $(OUTPUT) $(BIN) \
+	$(MACHINE).lds $(OBJS)
+
+$(OUTPUT): $(MACHINE).lds $(OBJS)
+	$(CC) $(CPPFLAGS) -e __start -T $(MACHINE).lds -o $@ $(OBJS)
+
+
+$(BIN): $(OUTPUT)
+	$(OBJCOPY) -O binary $(OUTPUT) $(BIN)
+
+%.o: %.S
+	$(CC) $(CPPFLAGS) -I. -c -o $@ $<
+
+%.o: %.c
+	$(CC) $(CPPFLAGS) -I. -c -o $@ $<
+
+$(MACHINE).lds: $(LD_SCRIPT) Makefile
+	$(CC) $(CPPFLAGS) -E -P -C -o $@ $<
+
+%: force
+	$(MAKE) -C $(KERNEL_SRC) $@
+
+force: ;
+
+Makefile: ;
+
+.PHONY: all clean config.mk

@@ -1,0 +1,10 @@
+core-objs-y+=guest.o
+core-objs-y+=guest_hw.o
+core-objs-y+=interrupt.o
+core-objs-y+=interrupt_hw.o
+core-objs-y+=memory.o
+core-objs-y+=memory_hw.o
+core-objs-y+=timer.o
+core-objs-y+=timer_hw.o
+core-objs-y+=vdev.o
+core-objs-y+=vm_main.o
